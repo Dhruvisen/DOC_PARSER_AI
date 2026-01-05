@@ -1,31 +1,39 @@
-from langchain_community.llms import HuggingFacePipeline
-from transformers import pipeline
+import os
+from dotenv import load_dotenv
+from langchain_google_genai import ChatGoogleGenerativeAI
 from schemas.output_schema import ParsedDocument
 from utils.cleaners import clean_text
 from typing import Optional
 
+load_dotenv()
+
 class TextParserAgent:
     def __init__(self):
-        pipe = pipeline(
-            task="text-generation",
-            model="Qwen/Qwen2.5-1.5B-Instruct",
-            device=-1,
-            max_new_tokens=512,
-            do_sample=False,
+        self.llm = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash",
+            temperature=0,
+            max_retries=2,
         )
-        self.llm = HuggingFacePipeline(pipeline=pipe)
 
     def summarize(self, text: str) -> str:
-        prompt = f"Summarize the following document clearly:\n\n{text}"
-        # Using .invoke() instead of __call__
+        prompt = [
+            ("system", "You are an AI document analysis assistant. Summarize the provided text clearly and concisely, focusing on key details like dates, amounts, and parties involved."),
+            ("user", text),
+        ]
         response = self.llm.invoke(prompt)
-        return response.strip()
+        return response.content.strip()
 
-    def parse(self, raw_text: str, filename: str, file_type: str, pages: Optional[list] = None) -> ParsedDocument:
+    def parse(
+        self,
+        raw_text: str,
+        filename: str,
+        file_type: str,
+        pages: Optional[list] = None,
+    ) -> ParsedDocument:
         cleaned_text = clean_text(raw_text)
         
-        # Summarize first 4000 chars and clean output
-        raw_summary = self.summarize(cleaned_text[:4000])
+        raw_summary = self.summarize(cleaned_text)
+        
         summary = clean_text(raw_summary)
 
         return ParsedDocument(

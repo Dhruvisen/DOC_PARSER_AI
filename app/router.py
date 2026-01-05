@@ -45,6 +45,8 @@ async def route_file(files: Union[UploadFile, List[UploadFile]]):
 
             elif mime in {"image/png", "image/jpeg"}:
                 raw_text = load_image(file_bytes)
+                if raw_text:
+                    raw_text = raw_text.replace("\x00", "")
                 file_type = "image"
 
             elif mime in {
