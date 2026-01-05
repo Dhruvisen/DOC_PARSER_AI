@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pymupdf
+paddleocr
+pillow
+pandas
+python-docx
+transformers
+torch
+sentencepiece
+langchain
+langchain-community
+langchain-core
