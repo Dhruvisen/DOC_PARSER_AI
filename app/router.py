@@ -4,7 +4,7 @@ import filetype
 
 from agent.text_parser_agent import TextParserAgent
 from loaders.pdf_loader import load_pdf
-from loaders.image_loader import load_image
+from loaders.image_loader import ocr_image_from_bytes
 from loaders.doc_loader import load_doc
 from loaders.csv_loader import load_csv
 from loaders.excel_loader import load_excel
@@ -44,7 +44,7 @@ async def route_file(files: Union[UploadFile, List[UploadFile]]):
                 file_type = "pdf"
 
             elif mime in {"image/png", "image/jpeg"}:
-                raw_text = load_image(file_bytes)
+                raw_text = await ocr_image_from_bytes(file_bytes, agent.llm)
                 if raw_text:
                     raw_text = raw_text.replace("\x00", "")
                 file_type = "image"

@@ -1,13 +1,29 @@
-import pytesseract
-from PIL import Image
 import io
+import base64
+from PIL import Image
+from llm.qwen_model import run_vlm
 
-def ocr_image_from_bytes(image_bytes: bytes) -> str:
-    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-    text = pytesseract.image_to_string(image)
-    return text.strip()
+async def ocr_image_from_bytes(image_bytes: bytes, llm=None, markdown: bool = False) -> str:
+    """Extract text from an image using the local open source VLM (Qwen2-VL)."""
+    try:
+        result = run_vlm(image_bytes, "Extract all visible text from this image accurately. Return only the extracted text.")
+        
+        if markdown:
+            return f"\n### OCR Result\n\n```\n{result}\n```\n"
+        
+        return result
+    
+    except Exception as e:
+        print(f"Error processing image with VLM: {e}")
+        return f"Error encountered: {e}"
 
 def load_image(path: str) -> str:
-    image = Image.open(path).convert("RGB")
-    text = pytesseract.image_to_string(image)
-    return text.strip()
+    """
+    Load image from path and run VLM.
+    """
+    try:
+        with open(path, "rb") as f:
+            image_bytes = f.read()
+        return run_vlm(image_bytes)
+    except Exception as e:
+        return ""
