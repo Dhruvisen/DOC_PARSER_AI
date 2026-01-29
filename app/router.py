@@ -32,6 +32,10 @@ async def route_file(files: Union[UploadFile, List[UploadFile]]):
             kind = filetype.guess(file_bytes)
             mime = kind.mime if kind else None
 
+            # Fallback for CSV (detection often fails)
+            if mime is None and filename.lower().endswith(".csv"):
+                mime = "text/csv"
+
             raw_text = None
             pages = None
             file_type = None
@@ -56,15 +60,17 @@ async def route_file(files: Union[UploadFile, List[UploadFile]]):
                 raw_text = load_doc(file_bytes)
                 file_type = "docx"
 
+            # CSV handling
             elif mime == "text/csv":
-                raw_text = load_csv(file_bytes)
+                raw_text = load_csv(file_bytes, markdown=False)
                 file_type = "csv"
 
+            # Excel handling
             elif mime in {
                 "application/vnd.ms-excel",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             }:
-                raw_text = load_excel(file_bytes)
+                raw_text = load_excel(file_bytes, file_name=filename, markdown=False)
                 file_type = "excel"
 
             else:

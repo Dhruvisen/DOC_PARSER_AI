@@ -10,7 +10,7 @@ load_dotenv()
 class TextParserAgent:
     def __init__(self):
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
+            model="gemini-2.0-flash-001",
             temperature=0,
             max_retries=2,
         )
