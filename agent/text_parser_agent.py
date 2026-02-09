@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 from schemas.output_schema import ParsedDocument
 from utils.cleaners import clean_text
 from typing import Optional
@@ -9,8 +9,8 @@ load_dotenv()
 
 class TextParserAgent:
     def __init__(self):
-        self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash-001",
+        self.llm = ChatGroq(
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
             temperature=0,
             max_retries=2,
         )

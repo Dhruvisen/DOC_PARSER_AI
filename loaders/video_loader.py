@@ -1,3 +1,4 @@
+
 import av
 from io import BytesIO
 from typing import Optional, Any
@@ -19,7 +20,7 @@ async def video_parser(video_data: bytes, llm: Any = None, fps: float = 1) -> st
 
     # llm is optional in signature but required logically if we want description
     # if llm is None:
-    #    raise ValueError("LLM instance is required for video parsing")
+    #    raise ValueError("LLM instance is  required for video parsing")
 
     # Validate video format
     kind = filetype.guess(video_data)
@@ -106,29 +107,27 @@ async def video_parser(video_data: bytes, llm: Any = None, fps: float = 1) -> st
     prompt = "Describe what the video shows based on the provided frames."
     print("""Using LLM to process video frames...""")
     
-    # ADAPTATION: The user code calls `llm.generate`. Our Agent LLM (Gemini) uses `invoke` with specific prompts.
-    # We will try to adapt if the LLM provided is our TextParserAgent or similar.
-    # For now, we assume the user might pass a compatible LLM or we mock it.
-    
-    # If LLM has generate method:
-    if hasattr(llm, "generate"):
-        result = await llm.generate(prompt=prompt, images=frames, stream=False)
-        return result.strip()
-    
-    # Fallback to langchain invoke if possible
+    # Use LangChain invoke/ainvoke with vision content format
     if hasattr(llm, "invoke") or hasattr(llm, "ainvoke"):
         # Construct message
         from langchain_core.messages import HumanMessage
         import base64
         
+        # Limit frames and resize to avoid "Request Entity Too Large" error
+        MAX_FRAMES = 5
+        MAX_SIZE = (512, 512)
+        
         content = [{"type": "text", "text": prompt}]
-        for i, img in enumerate(frames[:10]): # Limit to 10 frames to avoid overload
+        for i, img in enumerate(frames[:MAX_FRAMES]):
+            # Resize image maintaining aspect ratio
+            img.thumbnail(MAX_SIZE, Image.Resampling.LANCZOS)
+            
             buffered = BytesIO()
-            img.save(buffered, format="JPEG")
+            img.save(buffered, format="JPEG", quality=70) # Lower quality to reduce size
             img_b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
             content.append({
                 "type": "image_url", 
-                "image_url": f"data:image/jpeg;base64,{img_b64}"
+                "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}
             })
             
         message = HumanMessage(content=content)

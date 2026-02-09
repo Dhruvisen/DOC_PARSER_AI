@@ -1,20 +1,26 @@
 import os
+import requests
 from dotenv import load_dotenv
-import google.generativeai as genai
 
 load_dotenv()
 
-api_key = os.getenv("GOOGLE_API_KEY")
-if not api_key:
-    print("Error: GOOGLE_API_KEY not found in .env")
-    exit(1)
+api_key = os.getenv("GROQ_API_KEY")
+url = "https://api.groq.com/openai/v1/models"
 
-genai.configure(api_key=api_key)
+headers = {
+    "Authorization": f"Bearer {api_key}",
+    "Content-Type": "application/json"
+}
 
-print("Listing available models...")
-try:
-    for m in genai.list_models():
-        if 'generateContent' in m.supported_generation_methods:
-            print(f"- {m.name}")
-except Exception as e:
-    print(f"Error listing models: {e}")
+response = requests.get(url, headers=headers)
+
+if response.status_code == 200:
+    models = response.json().get("data", [])
+    print("Available Models on Groq:")
+    print("-" * 30)
+    for model in sorted(models, key=lambda x: x['id']):
+        # Filter for vision models if preferred, but listing all for clarity
+        print(f"ID: {model['id']}")
+else:
+    print(f"Error fetching models: {response.status_code}")
+    print(response.text)
