@@ -1,18 +1,18 @@
-import os
-from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from schemas.output_schema import ParsedDocument
 from utils.cleaners import clean_text
 from typing import Optional
+from app.core.config import get_settings
 
-load_dotenv()
+settings = get_settings()
 
 class TextParserAgent:
     def __init__(self):
         self.llm = ChatGroq(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            model="llama-3.2-90b-vision-preview", # Updated to a vision-capable model for video/images
             temperature=0,
             max_retries=2,
+            api_key=settings.GROQ_API_KEY
         )
 
     def summarize(self, text: str) -> str:
