@@ -10,7 +10,13 @@ sentencepiece
 langchain
 langchain-community
 langchain-core
+langchain-groq
 easyocr
 av
 opencv-python-headless
 filetype
+pydantic-settings
+faiss-cpu
+sentence-transformers
+langchain-huggingface
+langchain_groq
