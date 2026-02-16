@@ -66,8 +66,8 @@ class RAGService:
             
             # Split text into chunks
             text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=1000,
-                chunk_overlap=200
+                chunk_size=500,
+                chunk_overlap=100
             )
             chunks = text_splitter.split_documents(documents)
             
@@ -99,24 +99,37 @@ class RAGService:
         if self.vector_store is None:
             raise HTTPException(status_code=400, detail="No documents indexed. Please upload a document first.")
         
-        # Retrieve relevant chunks
-        retriever = self.vector_store.as_retriever(search_kwargs={"k": 5})
+        # Retrieve relevant chunks - increased k for better context coverage
+        retriever = self.vector_store.as_retriever(search_kwargs={"k": 8})
         context_docs = retriever.invoke(query)
         context_text = "\n\n".join([doc.page_content for doc in context_docs])
         
-        # Construct prompt
-        template = """Answer the question based only on the following context:
+        # Construct improved prompt
+        template = """You are a helpful assistant that answers questions based on the provided context. 
+If the answer is not contained within the context, politely state that you don't have enough information to answer the question.
+
+Context:
 {context}
 
 Question: {question}
-"""
+
+Detailed Answer:"""
         prompt = ChatPromptTemplate.from_template(template)
         
         # Generate answer
         chain = prompt | self.llm | StrOutputParser()
-        answer = chain.invoke({"context": context_text, "question": query})
+        answer = await chain.ainvoke({"context": context_text, "question": query})
         
         return answer
+
+    async def clear_index(self) -> str:
+        """
+        Clears the existing FAISS index from disk and memory.
+        """
+        self.vector_store = None
+        if os.path.exists(self.index_path):
+            shutil.rmtree(self.index_path)
+        return "Index cleared successfully. You can now re-upload documents with the new settings."
 
 # Global instance
 rag_service = RAGService()

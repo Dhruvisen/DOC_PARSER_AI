@@ -52,3 +52,10 @@ async def ask_document(request: QuestionRequest):
     """
     answer = await rag_service.query_document(request.question)
     return {"status": "success", "answer": answer}
+@router.post("/clear-index")
+async def clear_index():
+    """
+    Clear the existing RAG index to allow re-indexing with new parameters.
+    """
+    result = await rag_service.clear_index()
+    return {"status": "success", "message": result}
