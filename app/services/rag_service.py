@@ -2,6 +2,7 @@ from typing import List, Optional
 import os
 import shutil
 from pathlib import Path
+import uuid
 
 from fastapi import UploadFile, HTTPException
 from langchain_community.document_loaders import PyMuPDFLoader, TextLoader
@@ -40,68 +41,100 @@ class RAGService:
                 print(f"Warning: Could not load existing index: {e}")
                 self.vector_store = None
 
-    async def ingest_document(self, file: UploadFile) -> str:
+    async def ingest_documents(self, files: List[UploadFile], user_id: str) -> str:
         """
-        Processes an uploaded document, chunks it, and adds embeddings to the vector store.
-        Supports PDF and TXT files.
+        Processes multiple uploaded documents, chunks them, and adds embeddings to the vector store.
+        Each chunk is tagged with the user_id for multi-tenant support.
         """
         temp_dir = Path("temp_uploads")
         temp_dir.mkdir(exist_ok=True)
-        file_path = temp_dir / file.filename
+        
+        all_chunks = []
+        processed_files = []
         
         try:
-            # Save uploaded file temporarily
-            with file_path.open("wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
-            
-            # Load document based on extension
-            if file.filename.endswith(".pdf"):
-                loader = PyMuPDFLoader(str(file_path))
-            elif file.filename.endswith(".txt"):
-                loader = TextLoader(str(file_path), encoding="utf-8")
-            else:
-                raise HTTPException(status_code=400, detail="Unsupported file type. Only PDF and TXT are supported for RAG.")
-            
-            documents = loader.load()
-            
-            # Split text into chunks
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=500,
-                chunk_overlap=100
-            )
-            chunks = text_splitter.split_documents(documents)
-            
-            if not chunks:
-                 raise HTTPException(status_code=400, detail="Document appears to be empty or could not be processed.")
+            for file in files:
+                file_path = temp_dir / file.filename
+                try:
+                    doc_id = str(uuid.uuid4())
+                    
+                    # Save uploaded file temporarily
+                    with file_path.open("wb") as buffer:
+                        shutil.copyfileobj(file.file, buffer)
+                    
+                    # Load document based on extension
+                    if file.filename.endswith(".pdf"):
+                        loader = PyMuPDFLoader(str(file_path))
+                    elif file.filename.endswith(".txt"):
+                        loader = TextLoader(str(file_path), encoding="utf-8")
+                    else:
+                        print(f"Skipping unsupported file: {file.filename}")
+                        continue
+                    
+                    documents = loader.load()
+                    
+                    # Add user_id, doc_id and filename to metadata for each document
+                    for doc in documents:
+                        doc.metadata["user_id"] = user_id
+                        doc.metadata["doc_id"] = doc_id
+                        doc.metadata["filename"] = file.filename
+                    
+                    # Split text into chunks
+                    text_splitter = RecursiveCharacterTextSplitter(
+                        chunk_size=500,
+                        chunk_overlap=100
+                    )
+                    chunks = text_splitter.split_documents(documents)
+                    all_chunks.extend(chunks)
+                    processed_files.append(file.filename)
+                finally:
+                    # Cleanup temp file for each specifically after processing it
+                    if file_path.exists():
+                        file_path.unlink()
+
+            if not all_chunks:
+                 raise HTTPException(status_code=400, detail="No documents were processed or unsupported file types provided.")
 
             # Add to vector store
             if self.vector_store is None:
-                self.vector_store = FAISS.from_documents(chunks, self.embeddings)
+                self.vector_store = FAISS.from_documents(all_chunks, self.embeddings)
             else:
-                self.vector_store.add_documents(chunks)
+                self.vector_store.add_documents(all_chunks)
             
             # Persist the index
             self.vector_store.save_local(self.index_path)
             
-            return f"Successfully processed {file.filename} with {len(chunks)} chunks."
+            return f"Successfully processed {len(processed_files)} files for user {user_id}: {', '.join(processed_files)} with {len(all_chunks)} total chunks."
             
         finally:
-            # Cleanup temp file
-            if file_path.exists():
-                file_path.unlink()
+            # Final cleanup of temp dir if empty
             if temp_dir.exists() and not any(temp_dir.iterdir()):
                 temp_dir.rmdir()
 
-    async def query_document(self, query: str) -> str:
+    async def query_document(self, query: str, user_id: str) -> str:
         """
-        Retrieves relevant context for the query and generates an answer using the LLM.
+        Retrieves relevant context for the query (filtered by user_id) and generates an answer using the LLM.
         """
         if self.vector_store is None:
             raise HTTPException(status_code=400, detail="No documents indexed. Please upload a document first.")
         
-        # Retrieve relevant chunks - increased k for better context coverage
-        retriever = self.vector_store.as_retriever(search_kwargs={"k": 8})
-        context_docs = retriever.invoke(query)
+        # Retrieve relevant chunks filtered by user_id
+        try:
+            # FAISS in LangChain supports a 'filter' dict for exact matches
+            context_docs = self.vector_store.similarity_search(
+                query, 
+                k=8, 
+                filter={"user_id": user_id}
+            )
+        except Exception as e:
+            print(f"Search with filter failed: {e}. Falling back to post-retrieval filtering.")
+            # Fallback for older LangChain/FAISS versions or if filter structure is different
+            all_results = self.vector_store.similarity_search(query, k=20)
+            context_docs = [doc for doc in all_results if doc.metadata.get("user_id") == user_id][:8]
+
+        if not context_docs:
+            return "I couldn't find any relevant information in your uploaded documents. Please ensure you have uploaded the documents first."
+
         context_text = "\n\n".join([doc.page_content for doc in context_docs])
         
         # Construct improved prompt
@@ -124,12 +157,12 @@ Detailed Answer:"""
 
     async def clear_index(self) -> str:
         """
-        Clears the existing FAISS index from disk and memory.
+        Clears the entire index.
         """
         self.vector_store = None
         if os.path.exists(self.index_path):
             shutil.rmtree(self.index_path)
-        return "Index cleared successfully. You can now re-upload documents with the new settings."
+        return "Whole index cleared successfully."
 
 # Global instance
 rag_service = RAGService()

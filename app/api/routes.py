@@ -1,4 +1,5 @@
-from fastapi import APIRouter, UploadFile, File
+from typing import List
+from fastapi import APIRouter, UploadFile, File, Form
 from app.services.parser_service import route_file
 from app.chains.test_chain import run_test_chain
 from app.models.message import ChatRequest
@@ -6,6 +7,10 @@ from app.services.rag_service import rag_service
 from pydantic import BaseModel
 
 router = APIRouter()
+
+class QuestionRequest(BaseModel):
+    question: str
+    user_id: str
 
 @router.post("/parse")
 async def parse_document(file: UploadFile = File(...)):
@@ -21,10 +26,6 @@ async def parse_document(file: UploadFile = File(...)):
     }
 
 
-
-class QuestionRequest(BaseModel):
-    question: str
-
 @router.post("/test-llm")
 async def test_llm(request: ChatRequest):
     """
@@ -38,11 +39,11 @@ async def test_llm(request: ChatRequest):
         return {"status": "error", "message": str(e)}
 
 @router.post("/upload-doc")
-async def upload_document(file: UploadFile = File(...)):
+async def upload_documents(files: List[UploadFile] = File(...), user_id: str = Form(...)):
     """
-    Upload a document (PDF/TXT) for RAG processing.
+    Upload one or more documents (PDF/TXT) for RAG processing.
     """
-    result = await rag_service.ingest_document(file)
+    result = await rag_service.ingest_documents(files, user_id)
     return {"status": "success", "message": result}
 
 @router.post("/ask-doc")
@@ -50,7 +51,7 @@ async def ask_document(request: QuestionRequest):
     """
     Query the uploaded document using Retrieval-Augmented Generation (RAG).
     """
-    answer = await rag_service.query_document(request.question)
+    answer = await rag_service.query_document(request.question, request.user_id)
     return {"status": "success", "answer": answer}
 @router.post("/clear-index")
 async def clear_index():
