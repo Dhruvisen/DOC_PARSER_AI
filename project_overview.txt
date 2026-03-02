@@ -1,0 +1,16 @@
+# AI Document Parser & RAG System Overview
+
+This project is a modular AI backend designed for advanced document processing and retrieval-augmented generation (RAG).
+
+## Core Capabilities:
+1. **Multimodal Parsing**: Extracts text/data from PDFs, Images (OCR), Word, Excel, CSV, ZIP archives, and Videos using specialized loaders.
+2. **Intelligent Summarization**: Automatically cleans and summarizes document content using LangChain and Groq (LLMs).
+3. **Multi-Tenant RAG**: Ingests documents into a FAISS vector store with user-level isolation. Users can upload multiple documents and ask questions specifically about their own data.
+4. **Agentic Tools**: Exposes its parsing logic as reusable LangChain tools, ready for integration into complex AI agents and workflows.
+
+## Technology Stack:
+- **Backend**: FastAPI (Python)
+- **AI Framework**: LangChain & LangGraph
+- **LLM Provider**: Groq (Llama 3 models)
+- **Vector Search**: FAISS
+- **Embeddings**: HuggingFace (MiniLM)

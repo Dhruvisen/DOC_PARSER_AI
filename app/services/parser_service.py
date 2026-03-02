@@ -3,6 +3,7 @@ from typing import List, Union
 import filetype
 
 from agent.text_parser_agent import TextParserAgent
+from app.agents.rag_agent import rag_agent
 from loaders.pdf_loader import load_pdf
 from loaders.image_loader import ocr_image_from_bytes
 from loaders.doc_loader import load_doc
@@ -13,10 +14,10 @@ from loaders.video_loader import video_parser
 
 agent = TextParserAgent()
 
-async def process_single_file_content(file_bytes: bytes, filename: str):
+async def process_single_file_content(file_bytes: bytes, filename: str, user_id: str = "default"):
     """
     Core logic to route file bytes to the correct loader and then to the agent.
-    Returns the final parsed data structure.
+    Also stores the text in RAG via rag_agent.
     """
     # ---------- MIME DETECTION (SAFE) ----------
     kind = filetype.guess(file_bytes)
@@ -64,7 +65,7 @@ async def process_single_file_content(file_bytes: bytes, filename: str):
         raw_text = await process_zip_data(
             zip_data=file_bytes,
             llm=agent.llm,
-            process_file_fn=lambda file_data, llm, file_path: process_single_file_content(file_data, str(file_path))
+            process_file_fn=lambda file_data, llm, file_path: process_single_file_content(file_data, str(file_path), user_id=user_id)
         )
         file_type = "zip"
 
@@ -95,10 +96,38 @@ async def process_single_file_content(file_bytes: bytes, filename: str):
         file_type=file_type,
         pages=pages,
     )
-    return parsed
+
+    # ---------- DATA ANALYSIS (CSV/EXCEL ONLY) ----------
+    analysis_insights = None
+    if file_type in ["csv", "excel"]:
+        from app.agents.analyst_agent import analyst_agent
+        # Give it a generic question for initial parsing
+        analysis_result = analyst_agent.analyze(
+            file_bytes=file_bytes,
+            file_type=file_type,
+            question="Provide a general high-level summary and identify any interesting trends or outliers in this dataset."
+        )
+        if analysis_result["status"] == "success":
+            analysis_insights = analysis_result["insight"]
+
+    # ---------- RAG INGESTION ----------
+    # Store the extracted text into the vector store as requested
+    rag_agent.ingest_document(
+        text=raw_text,
+        filename=filename,
+        file_type=file_type,
+        user_id=user_id
+    )
+
+    # Convert ParsedDocument to dict and add insights
+    result_data = parsed.model_dump()
+    if analysis_insights:
+        result_data["data_analysis"] = analysis_insights
+
+    return result_data
 
 
-async def route_file(files: Union[UploadFile, List[UploadFile]]):
+async def route_file(files: Union[UploadFile, List[UploadFile]], user_id: str = "default"):
     """
     Handles single or multiple file uploads safely.
     Returns parsed output per file.
@@ -114,7 +143,7 @@ async def route_file(files: Union[UploadFile, List[UploadFile]]):
             file_bytes = await file.read()
             filename = file.filename
 
-            parsed = await process_single_file_content(file_bytes, filename)
+            parsed = await process_single_file_content(file_bytes, filename, user_id=user_id)
 
             results.append({
                 "filename": filename,
