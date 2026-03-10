@@ -10,6 +10,12 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: str | None = None
     GROQ_API_KEY: str | None = None
     
+    MINIO_ENDPOINT: str = "localhost:9022"
+    MINIO_ACCESS_KEY: str = "abc"
+    MINIO_SECRET_KEY: str = "abc_password"
+    MINIO_BUCKET_NAME: str = "doc-parser-bucket"
+    MINIO_SECURE: bool = False
+    
     class Config:
         env_file = ".env"
         extra = "ignore"

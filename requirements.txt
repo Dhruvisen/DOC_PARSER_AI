@@ -20,3 +20,6 @@ faiss-cpu
 sentence-transformers
 langchain-huggingface
 langchain_groq
+openpyxl
+streamlit
+streamlit

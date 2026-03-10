@@ -11,6 +11,7 @@ from loaders.csv_loader import load_csv
 from loaders.excel_loader import load_excel
 from loaders.zip_loader import process_zip_data
 from loaders.video_loader import video_parser
+from app.services.storage_service import storage_service
 
 agent = TextParserAgent()
 
@@ -110,19 +111,22 @@ async def process_single_file_content(file_bytes: bytes, filename: str, user_id:
         if analysis_result["status"] == "success":
             analysis_insights = analysis_result["insight"]
 
+    # ---------- STORAGE (MinIO) ----------
+    doc_id = storage_service.save_file(file_bytes, filename, user_id)
+
+    # Convert ParsedDocument to dict and add insights/doc_id
+    result_data = parsed.model_dump()
+    result_data["doc_id"] = doc_id
+    if analysis_insights:
+        result_data["data_analysis"] = analysis_insights
+
     # ---------- RAG INGESTION ----------
-    # Store the extracted text into the vector store as requested
     rag_agent.ingest_document(
         text=raw_text,
         filename=filename,
         file_type=file_type,
         user_id=user_id
     )
-
-    # Convert ParsedDocument to dict and add insights
-    result_data = parsed.model_dump()
-    if analysis_insights:
-        result_data["data_analysis"] = analysis_insights
 
     return result_data
 

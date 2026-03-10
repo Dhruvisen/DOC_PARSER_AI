@@ -28,4 +28,6 @@ dependencies = [
     "faiss-cpu",
     "sentence-transformers",
     "langchain-huggingface",
+    "openpyxl",
+    "streamlit>=1.55.0",
 ]
