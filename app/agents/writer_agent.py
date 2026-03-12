@@ -1,8 +1,11 @@
+import logging
 from typing import Dict, Any, Optional
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel, Field
 from app.core.llm import get_llm
+
+logger = logging.getLogger("app.agents.writer")
 
 class WrittenOutput(BaseModel):
     email_draft: str = Field(description="A professional email draft based on the analysis.")
@@ -11,8 +14,9 @@ class WrittenOutput(BaseModel):
 
 class WriterAgent:
     def __init__(self):
-        self.llm = get_llm(model_name="llama-3.3-70b-versatile", temperature=0.7)
+        self.llm = get_llm(temperature=0.7)
         self.output_parser = JsonOutputParser(pydantic_object=WrittenOutput)
+        logger.info("WriterAgent initialized.")
         
         self.prompt = ChatPromptTemplate.from_template("""
         You are a professional Business Writer and Communications Expert. 
@@ -36,6 +40,7 @@ class WriterAgent:
         """
         Takes raw data from various agents and composes professional documents.
         """
+        logger.info("Composing professional reports and communications...")
         chain = self.prompt | self.llm | self.output_parser
         
         try:
@@ -46,8 +51,10 @@ class WriterAgent:
                 "input_data": input_summary,
                 "format_instructions": self.output_parser.get_format_instructions()
             })
+            logger.info("Reports generated successfully.")
             return response
         except Exception as e:
+            logger.error(f"Failed to generate written output: {e}")
             return {
                 "error": f"Failed to generate written output: {str(e)}",
                 "email_draft": "Error",

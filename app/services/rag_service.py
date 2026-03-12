@@ -9,24 +9,15 @@ from langchain_community.document_loaders import PyMuPDFLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-
-from app.core.config import get_settings
-
-settings = get_settings()
+from app.core.llm import get_llm
 
 class RAGService:
     def __init__(self):
         self.vector_store = None
         self.embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-        self.llm = ChatGroq(
-            model="llama-3.3-70b-versatile",
-            temperature=0,
-            max_retries=2,
-            api_key=settings.GROQ_API_KEY
-        )
+        self.llm = get_llm(temperature=0)
         self.index_path = "faiss_index"
 
         # Load existing index if available

@@ -33,11 +33,15 @@ Extract structured data and text from a wide range of formats:
 ## 🛠️ Technology Stack
 
 - **Backend**: [FastAPI](https://fastapi.tiangolo.com/) (Python)
+- **Frontend**: [Streamlit](https://streamlit.io/) (Interactive UI)
 - **AI Framework**: [LangChain](https://www.langchain.com/) & [LangGraph](https://python.langchain.com/docs/langgraph)
-- **LLM Provider**: [Groq](https://groq.com/) (Llama 3 models)
+- **LLM Providers**: 
+  - 🌩️ **Groq**: Llama 3 models
+  - 💎 **Google Gemini**: Pro/Flash models
+  - 🏠 **Ollama**: Local models (Llama 3, Mistral, etc.)
 - **Vector Store**: [FAISS](https://github.com/facebookresearch/faiss)
 - **Embeddings**: [HuggingFace](https://huggingface.co/) (MiniLM)
-- **Storage**: MinIO / Local Disk
+- **Storage**: [MinIO](https://min.io/) (S3-Compatible Object Storage)
 
 ---
 
@@ -46,6 +50,8 @@ Extract structured data and text from a wide range of formats:
 ### Prerequisites
 - Python 3.11+
 - `uv` package manager (Recommended)
+- [Optional] Ollama for local LLM usage
+- [Optional] MinIO for cloud-native storage
 
 ### Step 1: Initialize Environment
 ```bash
@@ -62,22 +68,42 @@ uv sync
 Create a `.env` file in the root directory:
 ```env
 APP_NAME="AI Document Parser"
-GROQ_API_KEY=your_api_key_here
-STORAGE_TYPE=local  # or minio
-MINIO_ENDPOINT=localhost:9000
+# Provider: groq, google, or ollama
+LLM_PROVIDER=groq 
+
+# API Keys
+GROQ_API_KEY=your_groq_key
+GOOGLE_API_KEY=your_gemini_key
+OLLAMA_BASE_URL=http://localhost:11434
+
+# Storage (MinIO)
+STORAGE_TYPE=minio
+MINIO_ENDPOINT=localhost:9022
 MINIO_ACCESS_KEY=abc
-MINIO_SECRET_KEY=abcpwd
+MINIO_SECRET_KEY=abc_password
 ```
 
 ---
 
 ## 🏃 Running the Application
 
+### 0. Start Storage (MinIO)
 ```bash
-uvicorn app.main:app --reload
+docker-compose up -d
 ```
 
-- **API Base URL**: `http://localhost:8000`
+### 1. Start the Backend (API)
+```bash
+uvicorn app.main:app --reload --port 8000
+```
+
+### 2. Start the Frontend (UI)
+```bash
+streamlit run app/frontend/app.py
+```
+
+- **Backend API**: `http://localhost:8000`
+- **Frontend UI**: `http://localhost:8501`
 - **Interactive Docs**: `http://localhost:8000/docs`
 
 ---

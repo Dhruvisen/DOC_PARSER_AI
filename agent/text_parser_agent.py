@@ -7,7 +7,7 @@ from schemas.output_schema import ParsedDocument
 from utils.cleaners import clean_text
 
 class TextParserAgent:
-    def __init__(self, model_name: str = "llama-3.3-70b-versatile"):
+    def __init__(self, model_name: str = None):
         self.llm = get_llm(model_name=model_name, temperature=0)
         
         # Define the summary chain using LCEL

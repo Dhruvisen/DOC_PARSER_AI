@@ -30,4 +30,6 @@ dependencies = [
     "langchain-huggingface",
     "openpyxl",
     "streamlit>=1.55.0",
+    "langchain-google-genai>=4.2.1",
+    "boto3>=1.42.66",
 ]

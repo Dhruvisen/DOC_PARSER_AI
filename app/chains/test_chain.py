@@ -1,10 +1,6 @@
-from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
-from app.models.message import ChatRequest, ContentItem
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
+from app.models.message import ChatRequest
+from app.core.llm import get_llm
 
 def run_test_chain(request: ChatRequest):
     """
@@ -12,15 +8,11 @@ def run_test_chain(request: ChatRequest):
     Supports text and multimodal inputs (images).
     """
     
-    # Initialize LLM
-    # Use the model from the request, or default to a capable model
-    model_name = request.model or "llama-3.3-70b-versatile"
-    
-    llm = ChatGroq(
-        model=model_name,
-        temperature=request.temperature,
-        max_retries=2,
-        # api_key is loaded from env automatically by ChatGroq if GROQ_API_KEY is set
+    # Initialize LLM using our unified loader
+    # This will respect LLM_PROVIDER and DEFAULT_MODEL from .env
+    llm = get_llm(
+        model_name=request.model,
+        temperature=request.temperature
     )
 
     langchain_messages = []

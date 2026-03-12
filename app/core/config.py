@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str | None = None
     GOOGLE_API_KEY: str | None = None
     GROQ_API_KEY: str | None = None
+    LLM_PROVIDER: str = "groq"
+    DEFAULT_MODEL: str = "llama3.2:1b"
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
     
     MINIO_ENDPOINT: str = "localhost:9022"
     MINIO_ACCESS_KEY: str = "abc"

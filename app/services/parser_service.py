@@ -27,17 +27,21 @@ async def process_single_file_content(file_bytes: bytes, filename: str, user_id:
     6.  Storage: Persists the original file.
     7.  RAG Ingestion: Indexes the refined text into the user-partitioned FAISS vector store.
     """
-    # ---------- MIME DETECTION (SAFE) ----------
-    kind = filetype.guess(file_bytes)
-    mime = kind.mime if kind else None
-
-    # Fallback for CSV (detection often fails)
-    if mime is None and filename.lower().endswith(".csv"):
-        mime = "text/csv"
-
+    # ---------- MIME & EXTENSION DETECTION ----------
+    # Prioritize extensions for common data formats because 'filetype' often misidentifies Excel as ZIP
     raw_text = None
     pages = None
     file_type = None
+    mime = None
+
+    if filename.lower().endswith(".csv"):
+        mime = "text/csv"
+    elif filename.lower().endswith((".xlsx", ".xls", ".ods")):
+        mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    else:
+        # Fallback to magic bytes for other types (PDF, Images, etc.)
+        kind = filetype.guess(file_bytes)
+        mime = kind.mime if kind else None
 
     # ---------- ROUTING ----------
     if mime == "application/pdf":
@@ -58,14 +62,14 @@ async def process_single_file_content(file_bytes: bytes, filename: str, user_id:
         file_type = "docx"
 
     elif mime == "text/csv":
-        raw_text = load_csv(file_bytes, markdown=False)
+        raw_text = load_csv(file_bytes, markdown=True)
         file_type = "csv"
 
     elif mime in {
         "application/vnd.ms-excel",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     }:
-        raw_text = load_excel(file_bytes, file_name=filename, markdown=False)
+        raw_text = load_excel(file_bytes, file_name=filename, markdown=True)
         file_type = "excel"
 
     elif mime == "application/zip":
@@ -138,42 +142,39 @@ async def process_single_file_content(file_bytes: bytes, filename: str, user_id:
     return result_data
 
 
+import asyncio
+
 async def route_file(files: Union[UploadFile, List[UploadFile]], user_id: str = "default"):
     """
-    Handles single or multiple file uploads safely.
+    Handles single or multiple file uploads in parallel.
     Returns parsed output per file.
     """
-
     if not isinstance(files, list):
         files = [files]
 
-    results = []
-
-    for file in files:
+    async def _process(file):
         try:
             file_bytes = await file.read()
             filename = file.filename
-
             parsed = await process_single_file_content(file_bytes, filename, user_id=user_id)
-
-            results.append({
+            return {
                 "filename": filename,
                 "status": "success",
                 "data": parsed,
-            })
-
+            }
         except HTTPException as e:
-            results.append({
+            return {
                 "filename": file.filename,
                 "status": "error",
                 "error": e.detail,
-            })
-
+            }
         except Exception as e:
-            results.append({
+            return {
                 "filename": file.filename,
                 "status": "error",
                 "error": str(e),
-            })
+            }
 
+    # Execute all uploads concurrently
+    results = await asyncio.gather(*[_process(f) for f in files])
     return results
