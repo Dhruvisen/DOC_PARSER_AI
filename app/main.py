@@ -1,3 +1,22 @@
+"""
+AI Document Parser & RAG System
+==============================
+
+A high-performance FastAPI backend for multimodal document parsing and Retrieval-Augmented Generation (RAG).
+
+Core Features:
+- Multimodal Parsing: Extract text/data from PDF, OCR, Word, Excel, CSV, ZIP, and Video.
+- Multi-Tenant RAG: Vector search with user-level isolation using FAISS.
+- Agentic Workflows: Purpose-built agents for data analysis, RAG queries, and report writing.
+- Cloud-Ready: Support for local and MinIO storage.
+
+Architecture:
+- app.api.routes: Fast API endpoints.
+- app.services: Core business logic for parsing, storage, and RAG.
+- app.agents: Specialized AI agents (Analyst, RAG, Writer).
+- loaders: Format-specific data extraction modules.
+"""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -19,7 +38,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.APP_NAME,
-    description="FastAPI application for document parsing.",
+    description="Advanced AI Document Parser & RAG System backend.",
     version="1.0.0",
     lifespan=lifespan
 )

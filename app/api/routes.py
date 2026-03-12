@@ -23,9 +23,18 @@ class QuestionRequest(BaseModel):
 @router.post("/parse")
 async def parse_documents(files: List[UploadFile] = File(...), user_id: str = Form("default")):
     """
-    Parse documents and automatically index them into the RAG vector store.
-    Supports PDF, Image, DOCX, CSV, Excel, ZIP, Video.
-    Returns structured data (summaries + metadata) for each file.
+    **Document Ingestion & RAG Indexing**
+    
+    Parses multiple documents, extracts structured data/text, and automatically 
+    indexes them into a user-specific FAISS vector store.
+    
+    Supported Formats:
+    - Documents: PDF, DOCX, Text
+    - Data: CSV, Excel (XLSX, XLS)
+    - Multimedia: Images (OCR), Video (AI Parsing)
+    - Archives: ZIP (Recursive Processing)
+    
+    Returns: Structured extraction data + Document ID + (Optional) Data Analysis.
     """
     results = await route_file(files, user_id=user_id)
     return {
@@ -38,8 +47,11 @@ async def parse_documents(files: List[UploadFile] = File(...), user_id: str = Fo
 @router.post("/ask-doc")
 async def ask_document(request: QuestionRequest):
     """
-    Query the uploaded documents using Retrieval-Augmented Generation (RAG).
-    Uses the rag_agent to filter by user_id.
+    **Context-Aware Q&A (RAG)**
+    
+    Uses Retrieval-Augmented Generation to answer questions based on the 
+    user's uploaded documents. Employs user-level isolation to ensure 
+    data privacy and relevance.
     """
     # Using the rag_agent directly for queries as it's the more modern component
     answer = rag_agent.query(request.question, request.user_id)
@@ -48,7 +60,11 @@ async def ask_document(request: QuestionRequest):
 @router.post("/analyze-data")
 async def analyze_data(doc_id: str = Form(...), user_id: str = Form(...), question: str = Form(...)):
     """
-    Analyze a previously uploaded CSV or Excel file using its doc_id.
+    **Deep Data Analysis**
+    
+    Specialized agentic analysis for tabular data (CSV/Excel). 
+    Fetches the original file from storage and uses the Analyst Agent 
+    to provide insights, calculate metrics, or answer specific data questions.
     """
     file_bytes, file_type = storage_service.get_file(doc_id, user_id)
     
@@ -67,8 +83,13 @@ async def analyze_data(doc_id: str = Form(...), user_id: str = Form(...), questi
 @router.post("/generate-report")
 async def generate_report(request: QuestionRequest):
     """
-    Generate professional email, summary, and bullet report based on indexed context.
-    Utilizes the WriterAgent by feeding it context from the RAG memory.
+    **Automated Report Writing**
+    
+    Retrieves relevant context from the RAG store and passes it to the 
+    Writer Agent to generate professional responses:
+    - Formal Emails
+    - Executive Summaries
+    - Technical Reports
     """
 
     # Get context from RAG
@@ -88,7 +109,9 @@ async def generate_report(request: QuestionRequest):
 @router.post("/clear-index")
 async def clear_index():
     """
-    Clear the existing RAG index from disk and memory.
+    **Index Maintenance**
+    
+    Wipes the FAISS vector store index on disk and clears it from memory.
     """
     # Both services use 'faiss_index' folder, so clearing it from one works for both
     result = await rag_service.clear_index()

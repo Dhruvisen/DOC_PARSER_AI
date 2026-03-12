@@ -17,8 +17,15 @@ agent = TextParserAgent()
 
 async def process_single_file_content(file_bytes: bytes, filename: str, user_id: str = "default"):
     """
-    Core logic to route file bytes to the correct loader and then to the agent.
-    Also stores the text in RAG via rag_agent.
+    Multimodal Parsing Engine
+    -------------------------
+    1.  MIME Detection: Identifies file type using magic bytes.
+    2.  Routing: Dispatches to specialized loaders (PDF, DOCX, CSV, Excel, Image, Zip, Video).
+    3.  Text Extraction: Converts complex formats into clean, agent-ready text.
+    4.  Refinement: Uses TextParserAgent (LLM) to structure and clean the raw extraction.
+    5.  Deep Data Analysis: If CSV/Excel, uses AnalystAgent for initial insights.
+    6.  Storage: Persists the original file.
+    7.  RAG Ingestion: Indexes the refined text into the user-partitioned FAISS vector store.
     """
     # ---------- MIME DETECTION (SAFE) ----------
     kind = filetype.guess(file_bytes)

@@ -3,6 +3,12 @@ from io import BytesIO
 from loaders.image_loader import load_image 
 
 def load_pdf(pdf_bytes: bytes):
+    """
+    High-fidelity PDF extraction engine.
+    - Extracts native text from each page.
+    - Automatically detects and OCRs embedded images using Tesseract/PaddleOCR.
+    - Cleans null bytes and returns both a full string and page-mapped structure.
+    """
     full_text = ""
     pages_text = [] 
     pdf_stream = BytesIO(pdf_bytes)
