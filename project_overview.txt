@@ -1,4 +1,4 @@
-# AI Document Parser & RAG System Overview
+# RAG Doc Engine Overview
 
 This project is a modular AI backend designed for advanced document processing and retrieval-augmented generation (RAG).
 

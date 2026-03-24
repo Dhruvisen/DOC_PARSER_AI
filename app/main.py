@@ -1,5 +1,5 @@
 """
-AI Document Parser & RAG System
+RAG Doc Engine
 ==============================
 
 A high-performance FastAPI backend for multimodal document parsing and Retrieval-Augmented Generation (RAG).
@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.APP_NAME,
-    description="Advanced AI Document Parser & RAG System backend.",
+    description="Advanced RAG Doc Engine backend.",
     version="1.0.0",
     lifespan=lifespan
 )

@@ -9,7 +9,7 @@ if "backend_url" not in st.session_state:
     st.session_state.backend_url = "http://127.0.0.1:8001"
 
 st.set_page_config(
-    page_title="DOC PARSER AI - Multi-Agent System",
+    page_title="RAG Doc Engine - Multi-Agent System",
     page_icon=None,
     layout="wide",
 )
@@ -87,7 +87,7 @@ with st.sidebar:
         st.caption(f"Processed: {', '.join(st.session_state.processed_filenames)}")
 
 # --- MAIN PAGE ---
-st.title("DOC PARSER AI")
+st.title("RAG Doc Engine")
 st.markdown("---")
 
 tab1, tab2, tab3 = st.tabs(["Chat (RAG)", "Data Analysis", "Report Studio"])

@@ -1,4 +1,4 @@
-# 📄 AI Document Parser & RAG System
+# 📄 RAG Doc Engine
 
 A modular, high-performance AI backend designed for advanced document processing, multi-tenant Retrieval-Augmented Generation (RAG), and agentic workflows. Built with FastAPI, LangChain, and Groq.
 
@@ -67,7 +67,7 @@ uv sync
 ### Step 3: Configure Environment
 Create a `.env` file in the root directory:
 ```env
-APP_NAME="AI Document Parser"
+APP_NAME="rag_doc_engin"
 # Provider: groq, google, or ollama
 LLM_PROVIDER=groq 
 

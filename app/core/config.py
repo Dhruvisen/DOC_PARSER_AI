@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 from functools import lru_cache
 
 class Settings(BaseSettings):
-    APP_NAME: str = "AI Document Parser"
+    APP_NAME: str = "rag_doc_engin"
     DEBUG: bool = False
     LOG_LEVEL: str = "INFO"
     OPENAI_API_KEY: str | None = None
@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     MINIO_ENDPOINT: str = "localhost:9022"
     MINIO_ACCESS_KEY: str = "abc"
     MINIO_SECRET_KEY: str = "abc_password"
-    MINIO_BUCKET_NAME: str = "doc-parser-bucket"
+    MINIO_BUCKET_NAME: str = "rag-doc-engin-bucket"
     MINIO_SECURE: bool = False
     
     class Config:

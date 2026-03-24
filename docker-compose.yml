@@ -1,7 +1,7 @@
 services:
   minio:
     image: minio/minio:latest
-    container_name: doc-parser-minio
+    container_name: rag-doc-engin-minio
     ports:
       - "9022:9000"
       - "9023:9001"

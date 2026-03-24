@@ -1,5 +1,5 @@
 [project]
-name = "doc-parser-ai"
+name = "rag-doc-engin"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
