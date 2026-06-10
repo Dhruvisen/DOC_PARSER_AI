@@ -17,13 +17,16 @@ async def ocr_image_from_bytes(image_bytes: bytes, llm=None, markdown: bool = Fa
         print(f"Error processing image with VLM: {e}")
         return f"Error encountered: {e}"
 
-def load_image(path: str) -> str:
+def load_image(image_source) -> str:
     """
-    Load image from path and run VLM.
+    Load image from path or bytes and run VLM.
     """
     try:
-        with open(path, "rb") as f:
-            image_bytes = f.read()
+        if isinstance(image_source, bytes):
+            image_bytes = image_source
+        else:
+            with open(image_source, "rb") as f:
+                image_bytes = f.read()
         return run_vlm(image_bytes)
     except Exception as e:
         return ""

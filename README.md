@@ -24,9 +24,8 @@ Extract structured data and text from a wide range of formats:
 - **Automated Summarization**: Automatically generates high-level summaries and cleans extracted text.
 - **Data Insights**: Specialized analysis for CSV/Excel files to identify trends, outliers, and key metrics using the `AnalystAgent`.
 
-### 4. **Agentic Workflows**
-- **Writer Agent**: Generates professional emails, summaries, and bulleted reports based on document context.
-- **Modular Design**: Parsing logic is exposed as reusable LangChain tools, ready for integration into larger AI ecosystems.
+### 4. **Modular Agentic Design**
+Parsing logic is exposed as reusable LangChain tools, ready for integration into larger AI ecosystems.
 
 ---
 
@@ -123,10 +122,6 @@ Query your documents using semantic search.
 Perform deep analysis on CSV/Excel files.
 - **Payload**: `doc_id` (Form), `user_id` (Form), `question` (Form)
 
-### ✍️ `POST /generate-report`
-Generate professional summaries and reports.
-- **Payload**: `{"question": "Report requirements", "user_id": "..."}`
-
 ### 🧹 `POST /clear-index`
 Clear the vector store index.
 
@@ -136,7 +131,7 @@ Clear the vector store index.
 
 ```
 ├── app/
-│   ├── agents/         # AI Agents (RAG, Analyst, Writer)
+│   ├── agents/         # AI Agents (RAG, Analyst)
 │   ├── api/            # Route handlers and API definitions
 │   ├── core/           # Configuration, logging, and security
 │   ├── services/       # Business logic (Parser, RAG, Storage)

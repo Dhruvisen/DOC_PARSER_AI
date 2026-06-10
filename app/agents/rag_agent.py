@@ -1,5 +1,7 @@
 import os
 import logging
+import asyncio
+import shutil
 from typing import List, Optional, Dict, Any
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -19,6 +21,7 @@ class RAGAgent:
         self.embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
         self.index_path = index_path
         self.llm = get_llm(temperature=0)
+        self._lock = asyncio.Lock()  # Prevents race conditions during FAISS saves
         self.vector_store = self._load_vector_store()
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=500,
@@ -40,9 +43,10 @@ class RAGAgent:
                 print(f"Warning: Could not load index at {self.index_path}: {e}")
         return None
 
-    def ingest_document(self, text: str, filename: str, file_type: str, user_id: str = "default"):
+    async def ingest_document(self, text: str, filename: str, file_type: str, user_id: str = "default"):
         """
         Stores parsed text into the vector database with metadata.
+        Uses a lock to prevent concurrent writes/saves.
         """
         logger.info(f"Ingesting document: {filename} (Type: {file_type}) for User: {user_id}")
         doc = Document(
@@ -56,38 +60,41 @@ class RAGAgent:
         chunks = self.text_splitter.split_documents([doc])
         logger.info(f"Split into {len(chunks)} chunks.")
         
-        if self.vector_store is None:
-            self.vector_store = FAISS.from_documents(chunks, self.embeddings)
-        else:
-            self.vector_store.add_documents(chunks)
-        
-        # Persist data
-        self.vector_store.save_local(self.index_path)
+        async with self._lock:
+            if self.vector_store is None:
+                self.vector_store = FAISS.from_documents(chunks, self.embeddings)
+            else:
+                self.vector_store.add_documents(chunks)
+            
+            # Persist data to disk
+            self.vector_store.save_local(self.index_path)
+            
         logger.info(f"Successfully indexed and saved {filename}")
         return len(chunks)
 
-    def query(self, query: str, user_id: str = "default") -> str:
+    async def query(self, query: str, user_id: str = "default") -> str:
         """
         Retriever chain that answers questions based ONLY on stored documents.
         """
         logger.info(f"RAG Query from {user_id}: {query}")
         
-        if self.vector_store is None:
-            logger.warning("No vector store found during query.")
-            return "No documents have been indexed yet. Please upload a document first."
-
         # Filter by user_id to ensure strict multi-tenancy
-        try:
-            results = self.vector_store.similarity_search(
-                query, 
-                k=5, 
-                filter={"user_id": user_id}
-            )
-        except Exception as e:
-            # Fallback: Retrieve more and filter in-memory if exact metadata filtering fails
-            logger.error(f"Filter search failed: {e}. Falling back to in-memory filtering.")
-            all_results = self.vector_store.similarity_search(query, k=20)
-            results = [doc for doc in all_results if doc.metadata.get("user_id") == user_id][:5]
+        async with self._lock:
+            if self.vector_store is None:
+                logger.warning("No vector store found during query.")
+                return "No documents have been indexed yet. Please upload a document first."
+
+            try:
+                results = self.vector_store.similarity_search(
+                    query, 
+                    k=5, 
+                    filter={"user_id": user_id}
+                )
+            except Exception as e:
+                # Fallback: Retrieve more and filter in-memory if exact metadata filtering fails
+                logger.error(f"Filter search failed: {e}. Falling back to in-memory filtering.")
+                all_results = self.vector_store.similarity_search(query, k=20)
+                results = [doc for doc in all_results if doc.metadata.get("user_id") == user_id][:5]
 
         if not results:
             logger.info("No relevant documents found for the query.")
@@ -117,11 +124,24 @@ class RAGAgent:
         Detailed Answer:""")
 
         chain = prompt | self.llm | StrOutputParser()
-        answer = chain.invoke({"context": context_text, "question": query})
-        logger.info("Answer generated successfully.")
+        answer = await chain.ainvoke({"context": context_text, "question": query})
         return answer
 
-    def __call__(self, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def clear_index(self):
+        """
+        Properly shuts down the vector store and deletes the index files.
+        Uses a lock to ensure no queries or ingestions are in progress.
+        """
+        logger.warning("Clearing RAG index from memory and disk.")
+        async with self._lock:
+            self.vector_store = None
+            if os.path.exists(self.index_path):
+                shutil.rmtree(self.index_path)
+            # Re-ensure it shows as cleared to the UI immediately
+            logger.info("RAG index cleared successfully.")
+            return "All indexed data has been permanently cleared."
+
+    async def __call__(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """
         Callable interface for LangGraph nodes.
         Expects 'query' and 'user_id' in state.
@@ -133,7 +153,7 @@ class RAGAgent:
         if not query:
             return {**state, "answer": "Error: No query provided in state."}
             
-        answer = self.query(query, user_id)
+        answer = await self.query(query, user_id)
         
         # Update state with the answer
         return {**state, "answer": answer}

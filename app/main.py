@@ -7,13 +7,13 @@ A high-performance FastAPI backend for multimodal document parsing and Retrieval
 Core Features:
 - Multimodal Parsing: Extract text/data from PDF, OCR, Word, Excel, CSV, ZIP, and Video.
 - Multi-Tenant RAG: Vector search with user-level isolation using FAISS.
-- Agentic Workflows: Purpose-built agents for data analysis, RAG queries, and report writing.
+- Agentic Workflows: Purpose-built agents for data analysis and RAG queries.
 - Cloud-Ready: Support for MinIO (S3-compatible) storage.
 
 Architecture:
 - app.api.routes: Fast API endpoints.
 - app.services: Core business logic for parsing, storage, and RAG.
-- app.agents: Specialized AI agents (Analyst, RAG, Writer).
+- app.agents: Specialized AI agents (Analyst, RAG).
 - loaders: Format-specific data extraction modules.
 """
 

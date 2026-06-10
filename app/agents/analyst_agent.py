@@ -87,7 +87,7 @@ class AnalystAgent:
             logger.info("Executing analysis...")
             local_vars = {"df": df, "result": None}
             try:
-                exec(python_code, {}, local_vars)
+                exec(python_code, local_vars)
                 analysis_result = local_vars.get("result")
             except Exception as e:
                 logger.error(f"Code execution failed: {e}")

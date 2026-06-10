@@ -132,7 +132,7 @@ async def process_single_file_content(file_bytes: bytes, filename: str, user_id:
         result_data["data_analysis"] = analysis_insights
 
     # ---------- RAG INGESTION ----------
-    rag_agent.ingest_document(
+    await rag_agent.ingest_document(
         text=raw_text,
         filename=filename,
         file_type=file_type,

@@ -6,7 +6,9 @@ import io
 
 # --- CONFIGURATION ---
 if "backend_url" not in st.session_state:
-    st.session_state.backend_url = "http://127.0.0.1:8001"
+    st.session_state.backend_url = "http://127.0.0.1:8000"
+
+BACKEND_URL = st.session_state.backend_url
 
 st.set_page_config(
     page_title="RAG Doc Engine - Multi-Agent System",
@@ -26,28 +28,6 @@ if "processed_filenames" not in st.session_state:
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.title("Configuration")
-    st.session_state.backend_url = st.text_input("Backend URL", value=st.session_state.backend_url)
-    BACKEND_URL = st.session_state.backend_url
-    
-    st.session_state.user_id = st.text_input("User ID", value=st.session_state.user_id)
-    
-    st.divider()
-    if st.button("Clear RAG Index"):
-        with st.spinner("Clearing index..."):
-            try:
-                response = requests.post(f"{BACKEND_URL}/clear-index")
-                if response.status_code == 200:
-                    st.success("Index cleared successfully!")
-                    st.session_state.messages = []
-                    st.session_state.last_processed_files = []
-                    st.session_state.processed_filenames = set()
-                else:
-                    st.error(f"Failed to clear index: {response.text}")
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
-
-    st.divider()
     st.subheader("Add New Documents")
     uploaded_files = st.file_uploader(
         "Choose files to analyze",
@@ -69,14 +49,9 @@ with st.sidebar:
                 if response.status_code == 200:
                     result = response.json()
                     new_results = result.get("data", [])
-                    
-                    # Append new results to history
                     st.session_state.last_processed_files.extend(new_results)
-                    
-                    # Mark as processed
                     for f in new_files:
                         st.session_state.processed_filenames.add(f.name)
-                        
                     st.success(f"Successfully processed {len(new_files)} new files!")
                 else:
                     st.error(f"Error: {response.status_code} - {response.text}")
@@ -84,13 +59,16 @@ with st.sidebar:
                 st.error(f"Connection failed: {str(e)}")
 
     if st.session_state.processed_filenames:
-        st.caption(f"Processed: {', '.join(st.session_state.processed_filenames)}")
+        st.divider()
+        st.caption("Recently Processed Files:")
+        for name in list(st.session_state.processed_filenames)[-5:]: # Show last 5
+            st.caption(f"✅ {name}")
 
 # --- MAIN PAGE ---
 st.title("RAG Doc Engine")
 st.markdown("---")
 
-tab1, tab2, tab3 = st.tabs(["Chat (RAG)", "Data Analysis", "Report Studio"])
+tab1, tab2 = st.tabs(["Chat (RAG)", "Data Analysis"])
 
 # TAB 1: CHAT / RAG
 with tab1:
@@ -196,7 +174,7 @@ with tab2:
                 with col2:
                     st.subheader("Deep Dive Analysis")
                     q = st.text_input("Ask a specific data question", key=f"q_{file_data.get('doc_id')}")
-                    if st.button("Run Python Analysis", key=f"btn_{file_data.get('doc_id')}"):
+                    if st.button("Run Python Analysis", key=f"btn_{file_data.get('doc_id')}", disabled=not q.strip()):
                         with st.spinner("Executing pandas code..."):
                             data = {
                                 "doc_id": file_data.get("doc_id"),
@@ -226,35 +204,12 @@ with tab2:
                                     else:
                                         st.error(analysis.get("error", "Analysis logic failed."))
                                 else:
-                                    st.error(f"Backend error: {res.status_code}")
+                                    try:
+                                        err_msg = res.json().get("detail", res.text)
+                                    except Exception:
+                                        err_msg = res.text
+                                    st.error(f"Backend error {res.status_code}: {err_msg}")
                             except Exception as e:
                                 st.error(f"Connection failed: {str(e)}")
 
-# TAB 3: REPORT STUDIO
-with tab3:
-    st.header("Professional Report Generation")
-    
-    st.markdown("Generate summaries, emails, and reports from the currently indexed context.")
-    
-    report_topic = st.text_area("What should the report focus on?", "Summarize the key findings and trends from all uploaded documents.")
-    
-    if st.button("Generate Executive Reports"):
-        with st.spinner("Writing reports..."):
-            try:
-                payload = {"question": report_topic, "user_id": st.session_state.user_id}
-                response = requests.post(f"{BACKEND_URL}/generate-report", json=payload)
-                if response.status_code == 200:
-                    reports = response.json().get("data", {})
-                    
-                    st.subheader("Email Draft")
-                    st.text_area("Copy this email:", value=reports.get("email_draft", ""), height=200)
-                    
-                    st.subheader("Management Summary")
-                    st.markdown(reports.get("management_summary", ""))
-                    
-                    st.subheader("Bullet Report")
-                    st.markdown(reports.get("bullet_report", ""))
-                else:
-                    st.error("Failed to generate report.")
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
+

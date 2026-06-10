@@ -4,11 +4,9 @@ from fastapi import APIRouter, UploadFile, File, Form
 from app.services.parser_service import route_file
 from app.chains.test_chain import run_test_chain
 from app.models.message import ChatRequest
-from app.services.rag_service import rag_service
 from pydantic import BaseModel
-from app.agents.analyst_agent import analyst_agent
 from app.agents.rag_agent import rag_agent
-from app.agents.writer_agent import writer_agent
+from app.agents.analyst_agent import analyst_agent
 from app.services.storage_service import storage_service
 
 logger = logging.getLogger("app.api.routes")
@@ -56,7 +54,7 @@ async def ask_document(request: QuestionRequest):
     """
     logger.info(f"Q&A Request from {request.user_id}: {request.question}")
     # Using the rag_agent directly for queries as it's the more modern component
-    answer = rag_agent.query(request.question, request.user_id)
+    answer = await rag_agent.query(request.question, request.user_id)
     return {"status": "success", "answer": answer}
 
 @router.post("/analyze-data")
@@ -85,34 +83,6 @@ async def analyze_data(doc_id: str = Form(...), user_id: str = Form(...), questi
     result = analyst_agent.analyze(file_bytes, file_type, question)
     return result
 
-@router.post("/generate-report")
-async def generate_report(request: QuestionRequest):
-    """
-    **Automated Report Writing**
-    
-    Retrieves relevant context from the RAG store and passes it to the 
-    Writer Agent to generate professional responses:
-    - Formal Emails
-    - Executive Summaries
-    - Technical Reports
-    """
-    logger.info(f"Report Generation Request from {request.user_id}: {request.question}")
-
-    # Get context from RAG
-    context = rag_agent.query(request.question, request.user_id)
-    
-    # Format state for the writer agent
-    writer_state = {
-        "query": request.question,
-        "user_id": request.user_id,
-        "answer": context
-    }
-    
-    # This calls the WriterAgent.__call__ which returns the updated state
-    response = writer_agent(writer_state)
-    logger.info(f"Report generation completed for user: {request.user_id}")
-    return {"status": "success", "data": response.get("written_output")}
-
 @router.post("/clear-index")
 async def clear_index():
     """
@@ -120,6 +90,5 @@ async def clear_index():
     
     Wipes the FAISS vector store index on disk and clears it from memory.
     """
-    # Both services use 'faiss_index' folder, so clearing it from one works for both
-    result = await rag_service.clear_index()
+    result = await rag_agent.clear_index()
     return {"status": "success", "message": result}
